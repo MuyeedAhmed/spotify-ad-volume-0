@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.Card
@@ -38,9 +39,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.advol.app.core.MuteStrategy
 import com.advol.app.core.PlaybackState
 import com.advol.app.ui.components.PermissionSetupCard
 import com.advol.app.ui.components.StatusCard
+import com.advol.app.ui.theme.AdOrange
 import com.advol.app.ui.theme.DarkBackground
 import com.advol.app.ui.theme.DarkSurface
 import com.advol.app.ui.theme.DarkSurfaceVariant
@@ -57,7 +60,10 @@ fun DashboardScreen(
     totalTimeMutedSeconds: Long,
     onToggleService: (Boolean) -> Unit,
     onOpenGuide: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isVolumeLocked: Boolean = false,
+    activeStrategy: MuteStrategy = MuteStrategy.NONE,
+    isDuckWhenLocked: Boolean = true
 ) {
     val scrollState = rememberScrollState()
 
@@ -104,8 +110,14 @@ fun DashboardScreen(
         // Live Spotify Status Card
         StatusCard(
             playbackState = playbackState,
-            isServiceEnabled = isServiceEnabled
+            isServiceEnabled = isServiceEnabled,
+            activeStrategy = activeStrategy
         )
+
+        // Android Auto / locked-volume notice
+        if (isVolumeLocked) {
+            CarModeBanner(isDuckWhenLocked = isDuckWhenLocked)
+        }
 
         // Statistics Grid
         Text(
@@ -148,6 +160,48 @@ fun DashboardScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun CarModeBanner(isDuckWhenLocked: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AdOrange.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+            .border(1.dp, AdOrange.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            imageVector = Icons.Default.DirectionsCar,
+            contentDescription = null,
+            tint = AdOrange,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "Android Auto / car mode detected",
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (isDuckWhenLocked) {
+                    "The car controls the volume, so Android ignores most phone volume changes. " +
+                        "AdVol will fully mute ads where your Android version still allows it; " +
+                        "otherwise it asks Spotify to lower its own volume (quieter, not silent)."
+                } else {
+                    "The car controls the volume, so Android ignores most phone volume changes. " +
+                        "Enable \"Lower ads in car mode\" in Settings so AdVol can still quieten ads " +
+                        "when a full mute is refused."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
+        }
     }
 }
 

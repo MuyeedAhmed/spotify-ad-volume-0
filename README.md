@@ -24,6 +24,20 @@ For ad detection without battery impact:
 
 ---
 
+## Android Auto (car mode)
+
+While Android Auto is connected, Android routes media to the car and locks the phone's media volume at maximum (the slider jumps to 100% and stays there). Apps cannot change the volume the car hears: the system silently ignores `setStreamVolume()` and even `ADJUST_MUTE` for the media stream. There is no public API around this.
+
+AdVol handles it like this:
+
+1. It detects the locked route (remote-submix media output for `USAGE_MEDIA`, or a volume write that did not take effect when read back).
+2. It still tries the real write first, then a plain full mute (index 0). Recent Android versions honour the full mute even in the car because it sets the stream's mute flag; older ones drop it.
+3. If nothing took effect, it holds transient *may-duck* audio focus for the length of the ad, so Spotify lowers its own output, the same way it does for Google Maps prompts, and releases focus the moment the song resumes.
+
+In the car, ads are therefore either **fully muted** (where the OS allows it) or **quieter, not silent** (ducking). The dashboard shows an "Android Auto / car mode detected" banner, the status card says "LOWERED (AD)" when ducking is in use, and the service notification says "Lowering ad volume". The ducking fallback can be turned off under **Settings → Android Auto & Casting**. Ad detection (Device Broadcast Status / Notification Access) works the same as on the phone.
+
+---
+
 ## Building the Project
 
 ### Prerequisites

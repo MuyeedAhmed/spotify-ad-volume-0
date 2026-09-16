@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.advol.app.core.MuteStrategy
 import com.advol.app.service.AdVolService
 import com.advol.app.ui.screens.DashboardScreen
 import com.advol.app.ui.screens.SettingsScreen
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
                 val totalAdsMuted by app.preferencesManager.totalAdsMuted.collectAsState(initial = 0)
                 val totalTimeMutedSeconds by app.preferencesManager.totalTimeMutedSeconds.collectAsState(initial = 0L)
                 val playbackState by app.currentPlaybackState.collectAsState()
+                val isDuckWhenLocked by app.preferencesManager.isDuckWhenVolumeLockedEnabled.collectAsState(initial = true)
+                val isVolumeLocked by app.volumeController.isVolumeLocked.collectAsState()
+                val activeStrategy by app.volumeController.activeStrategy.collectAsState()
 
                 var currentTab by remember { mutableStateOf(ScreenTab.DASHBOARD) }
 
@@ -123,6 +127,9 @@ class MainActivity : ComponentActivity() {
                             playbackState = playbackState,
                             totalAdsMuted = totalAdsMuted,
                             totalTimeMutedSeconds = totalTimeMutedSeconds,
+                            isVolumeLocked = isVolumeLocked,
+                            activeStrategy = activeStrategy,
+                            isDuckWhenLocked = isDuckWhenLocked,
                             onToggleService = { enabled ->
                                 scope.launch {
                                     app.preferencesManager.setServiceEnabled(enabled)
@@ -141,6 +148,8 @@ class MainActivity : ComponentActivity() {
                             muteLevelPercent = muteLevelPercent,
                             isSmoothFade = isSmoothFade,
                             fadeDurationMs = fadeDurationMs,
+                            isDuckWhenLocked = isDuckWhenLocked,
+                            onDuckWhenLockedChanged = { scope.launch { app.preferencesManager.setDuckWhenVolumeLockedEnabled(it) } },
                             onMuteLevelChanged = { scope.launch { app.preferencesManager.setMuteLevelPercent(it) } },
                             onSmoothFadeChanged = { scope.launch { app.preferencesManager.setSmoothFadeEnabled(it) } },
                             onFadeDurationChanged = { scope.launch { app.preferencesManager.setFadeDurationMs(it) } },

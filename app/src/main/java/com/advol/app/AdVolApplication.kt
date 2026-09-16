@@ -5,6 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import com.advol.app.core.AudioFocusDucker
+import com.advol.app.core.AudioRouteMonitor
 import com.advol.app.core.PlaybackState
 import com.advol.app.core.PreferencesManager
 import com.advol.app.core.VolumeController
@@ -25,6 +27,10 @@ class AdVolApplication : Application() {
     lateinit var volumeController: VolumeController
         private set
 
+    /** Tracks whether the current media route (e.g. Android Auto) ignores volume changes. */
+    lateinit var audioRouteMonitor: AudioRouteMonitor
+        private set
+
     private val _currentPlaybackState = MutableStateFlow(PlaybackState())
     val currentPlaybackState: StateFlow<PlaybackState> = _currentPlaybackState.asStateFlow()
 
@@ -32,7 +38,12 @@ class AdVolApplication : Application() {
         super.onCreate()
         instance = this
         preferencesManager = PreferencesManager(this)
-        volumeController = VolumeController(this)
+        audioRouteMonitor = AudioRouteMonitor(this).also { it.start() }
+        volumeController = VolumeController(
+            context = this,
+            routeMonitor = audioRouteMonitor,
+            ducker = AudioFocusDucker(this)
+        )
 
         createNotificationChannel()
     }

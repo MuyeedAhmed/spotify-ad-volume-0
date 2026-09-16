@@ -8,6 +8,8 @@
     <string name="status_inactive">AdVol is Paused</string>
     <string name="status_monitoring">Monitoring Spotify Playback…</string>
     <string name="status_ad_muted">Muting Spotify Advertisement</string>
+    <string name="status_ad_ducked">Lowering ad volume (Android Auto controls the phone volume)</string>
+    <string name="status_ad_volume_locked">Ad playing – phone volume is locked by Android Auto</string>
     <string name="action_pause">Pause</string>
     <string name="action_resume">Resume</string>
 </resources>

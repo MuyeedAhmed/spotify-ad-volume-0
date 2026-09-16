@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -49,6 +50,8 @@ fun SettingsScreen(
     muteLevelPercent: Int,
     isSmoothFade: Boolean,
     fadeDurationMs: Int,
+    isDuckWhenLocked: Boolean,
+    onDuckWhenLockedChanged: (Boolean) -> Unit,
     onMuteLevelChanged: (Int) -> Unit,
     onSmoothFadeChanged: (Boolean) -> Unit,
     onFadeDurationChanged: (Int) -> Unit,
@@ -212,6 +215,62 @@ fun SettingsScreen(
                             thumbColor = SpotifyGreen,
                             activeTrackColor = SpotifyGreen,
                             inactiveTrackColor = DarkSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
+
+        // Car / Android Auto fallback
+        Text(
+            text = "ANDROID AUTO & CASTING",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted,
+            letterSpacing = 1.5.sp
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Lower ads in car mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "While Android Auto (or casting) is active the car owns the volume and Android " +
+                                "ignores phone volume changes. AdVol always tries a real mute first; if the system " +
+                                "refuses it, this option lets AdVol ask Spotify to duck its own output during " +
+                                "ads instead. Ducked ads are quieter, not silent.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Switch(
+                        checked = isDuckWhenLocked,
+                        onCheckedChange = onDuckWhenLockedChanged,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = TextPrimary,
+                            checkedTrackColor = SpotifyGreen,
+                            uncheckedThumbColor = TextMuted,
+                            uncheckedTrackColor = DarkSurfaceVariant
                         )
                     )
                 }

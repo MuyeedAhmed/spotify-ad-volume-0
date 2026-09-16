@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.advol.app.core.MuteStrategy
 import com.advol.app.core.PlaybackState
 import com.advol.app.ui.theme.AdOrange
 import com.advol.app.ui.theme.AdRed
@@ -56,9 +58,12 @@ import com.advol.app.ui.theme.TextSecondary
 fun StatusCard(
     playbackState: PlaybackState,
     isServiceEnabled: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeStrategy: MuteStrategy = MuteStrategy.NONE
 ) {
     val isAd = playbackState.isAd && playbackState.isPlaying && isServiceEnabled
+    val isDucking = isAd && activeStrategy == MuteStrategy.AUDIO_FOCUS_DUCK
+    val isUnavailable = isAd && activeStrategy == MuteStrategy.UNAVAILABLE
 
     val cardBorderColor by animateColorAsState(
         targetValue = when {
@@ -116,6 +121,8 @@ fun StatusCard(
 
                 val badgeText = when {
                     !isServiceEnabled -> "PAUSED"
+                    isUnavailable -> "AD (CAN'T MUTE)"
+                    isDucking -> "LOWERED (AD)"
                     isAd -> "MUTED (AD)"
                     playbackState.isPlaying -> "PLAYING"
                     else -> "IDLE"
@@ -163,6 +170,7 @@ fun StatusCard(
                 ) {
                     Icon(
                         imageVector = when {
+                            isDucking || isUnavailable -> Icons.Default.VolumeDown
                             isAd -> Icons.Default.VolumeOff
                             playbackState.isPlaying -> Icons.Default.VolumeUp
                             else -> Icons.Default.MusicNote
@@ -193,6 +201,8 @@ fun StatusCard(
 
                     Text(
                         text = when {
+                            isUnavailable -> "Phone volume is locked by Android Auto"
+                            isDucking -> "Lowered via Spotify ducking (car mode)"
                             isAd -> "Volume is automatically reduced"
                             !playbackState.artistName.isNullOrBlank() -> playbackState.artistName
                             else -> "Start Spotify to begin monitoring"

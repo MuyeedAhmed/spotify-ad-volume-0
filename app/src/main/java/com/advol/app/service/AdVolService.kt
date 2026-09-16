@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.advol.app.AdVolApplication
 import com.advol.app.MainActivity
 import com.advol.app.R
+import com.advol.app.core.MuteStrategy
 import com.advol.app.core.PlaybackState
 import com.advol.app.receiver.SpotifyBroadcastReceiver
 import kotlinx.coroutines.CoroutineScope
@@ -130,6 +131,7 @@ class AdVolService : Service() {
             val muteLevel = app.preferencesManager.muteLevelPercent.first()
             val smoothFade = app.preferencesManager.isSmoothFadeEnabled.first()
             val fadeDuration = app.preferencesManager.fadeDurationMs.first()
+            val duckWhenLocked = app.preferencesManager.isDuckWhenVolumeLockedEnabled.first()
 
             if (state.isAd && state.isPlaying) {
                 Log.d(TAG, "Action: Muting Spotify Advertisement")
@@ -139,9 +141,18 @@ class AdVolService : Service() {
                 app.volumeController.mute(
                     targetPercent = muteLevel,
                     smoothFade = smoothFade,
-                    fadeDurationMs = fadeDuration
-                )
-                updateNotification(getString(R.string.status_ad_muted))
+                    fadeDurationMs = fadeDuration,
+                    allowDucking = duckWhenLocked
+                ) {
+                    // Called once the controller has decided which mechanism works on the
+                    // current route (phone volume vs. Android Auto ducking fallback).
+                    val text = when (app.volumeController.activeStrategy.value) {
+                        MuteStrategy.AUDIO_FOCUS_DUCK -> getString(R.string.status_ad_ducked)
+                        MuteStrategy.UNAVAILABLE -> getString(R.string.status_ad_volume_locked)
+                        else -> getString(R.string.status_ad_muted)
+                    }
+                    updateNotification(text)
+                }
             } else {
                 Log.d(TAG, "Action: Restoring volume for normal playback / pause")
                 if (adStartTime > 0L) {

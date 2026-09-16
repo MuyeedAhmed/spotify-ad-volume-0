@@ -22,6 +22,7 @@ class PreferencesManager(private val context: Context) {
         val KEY_FADE_DURATION_MS = intPreferencesKey("fade_duration_ms")
         val KEY_TOTAL_ADS_MUTED = intPreferencesKey("total_ads_muted")
         val KEY_TOTAL_TIME_MUTED_SECONDS = longPreferencesKey("total_time_muted_sec")
+        val KEY_DUCK_WHEN_VOLUME_LOCKED = booleanPreferencesKey("duck_when_volume_locked")
 
         const val DEFAULT_MUTE_LEVEL = 0 // 0% is full mute
         const val DEFAULT_FADE_DURATION = 250 // ms
@@ -41,6 +42,14 @@ class PreferencesManager(private val context: Context) {
 
     val fadeDurationMs: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[KEY_FADE_DURATION_MS] ?: DEFAULT_FADE_DURATION
+    }
+
+    /**
+     * When the media volume index is locked by the platform (Android Auto, casting), fall back to
+     * audio-focus ducking so the ad is at least lowered by the player itself.
+     */
+    val isDuckWhenVolumeLockedEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_DUCK_WHEN_VOLUME_LOCKED] ?: true
     }
 
     val totalAdsMuted: Flow<Int> = context.dataStore.data.map { preferences ->
@@ -72,6 +81,12 @@ class PreferencesManager(private val context: Context) {
     suspend fun setFadeDurationMs(durationMs: Int) {
         context.dataStore.edit { preferences ->
             preferences[KEY_FADE_DURATION_MS] = durationMs.coerceIn(50, 1000)
+        }
+    }
+
+    suspend fun setDuckWhenVolumeLockedEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_DUCK_WHEN_VOLUME_LOCKED] = enabled
         }
     }
 

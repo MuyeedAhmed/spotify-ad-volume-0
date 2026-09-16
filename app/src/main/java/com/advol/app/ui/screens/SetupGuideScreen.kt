@@ -109,6 +109,42 @@ fun SetupGuideScreen(
             description = "Switch 'Device Broadcast Status' to ON. This allows Spotify to notify AdVol of track and ad changes in real-time."
         )
 
+        // Android Auto note
+        Text(
+            text = "USING ANDROID AUTO?",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted,
+            letterSpacing = 1.5.sp
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Why ads may only be lowered in the car",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "When Android Auto is connected, Android routes media to the car and locks the phone's " +
+                        "media volume at maximum (you may have noticed the slider jumping to 100%). The car's own " +
+                        "knob controls loudness and apps cannot change it.\n\n" +
+                        "AdVol still tries a real mute first and checks whether Android accepted it (recent " +
+                        "versions do). If it was refused, AdVol falls back to asking Spotify to duck (lower) its " +
+                        "own output for the length of the ad, the same mechanism navigation prompts use. Ducked " +
+                        "ads are noticeably quieter but not silent. Detection still needs 'Device Broadcast " +
+                        "Status' or Notification Access as usual.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // Open Spotify Button
