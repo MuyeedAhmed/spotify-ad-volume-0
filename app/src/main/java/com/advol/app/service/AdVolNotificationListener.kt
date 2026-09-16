@@ -14,9 +14,28 @@ import com.advol.app.core.PlaybackState
  */
 class AdVolNotificationListener : NotificationListenerService() {
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        Log.d(TAG, "Listener connected")
+        // If the process was just (re)created while Spotify is already playing, the current
+        // notification was posted before we were bound and would otherwise be missed until the
+        // next track change. Evaluate it right away so a running ad gets muted immediately.
+        try {
+            activeNotifications
+                ?.filter { it.packageName == SPOTIFY_PACKAGE }
+                ?.maxByOrNull { it.postTime }
+                ?.let { handleSpotifyNotification(it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read active notifications on connect: ${e.message}")
+        }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null || sbn.packageName != SPOTIFY_PACKAGE) return
+        handleSpotifyNotification(sbn)
+    }
 
+    private fun handleSpotifyNotification(sbn: StatusBarNotification) {
         val extras = sbn.notification.extras ?: return
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()

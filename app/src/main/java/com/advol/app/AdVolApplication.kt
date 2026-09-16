@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import com.advol.app.core.AdMuteCoordinator
 import com.advol.app.core.AudioFocusDucker
 import com.advol.app.core.AudioRouteMonitor
 import com.advol.app.core.PlaybackState
@@ -31,6 +32,10 @@ class AdVolApplication : Application() {
     lateinit var audioRouteMonitor: AudioRouteMonitor
         private set
 
+    /** Turns playback updates into mute/restore actions, independent of the service lifecycle. */
+    lateinit var adMuteCoordinator: AdMuteCoordinator
+        private set
+
     private val _currentPlaybackState = MutableStateFlow(PlaybackState())
     val currentPlaybackState: StateFlow<PlaybackState> = _currentPlaybackState.asStateFlow()
 
@@ -44,6 +49,7 @@ class AdVolApplication : Application() {
             routeMonitor = audioRouteMonitor,
             ducker = AudioFocusDucker(this)
         )
+        adMuteCoordinator = AdMuteCoordinator(this)
 
         createNotificationChannel()
     }

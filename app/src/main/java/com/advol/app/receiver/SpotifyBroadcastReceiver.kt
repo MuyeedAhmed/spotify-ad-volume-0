@@ -27,7 +27,6 @@ class SpotifyBroadcastReceiver : BroadcastReceiver() {
                 val artistName = intent.getStringExtra("artist")
                 val albumName = intent.getStringExtra("album")
                 val trackLength = intent.getIntExtra("length", 0)
-                val isPlaying = intent.getBooleanExtra("playing", prevState.isPlaying)
 
                 val isAd = AdDetectionEngine.isAdFromBroadcast(
                     trackId = trackId,
@@ -36,6 +35,9 @@ class SpotifyBroadcastReceiver : BroadcastReceiver() {
                     albumName = albumName,
                     trackLengthMs = trackLength
                 )
+
+                val explicitPlaying = if (intent.hasExtra("playing")) intent.getBooleanExtra("playing", false) else null
+                val isPlaying = PlaybackState.resolveMetadataIsPlaying(explicitPlaying, prevState, isAd)
 
                 Log.d(TAG, "METADATA_CHANGED -> isAd: $isAd, track: '$trackName', artist: '$artistName', id: '$trackId', isPlaying: $isPlaying")
 

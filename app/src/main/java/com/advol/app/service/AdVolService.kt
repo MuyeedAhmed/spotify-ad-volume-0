@@ -15,7 +15,6 @@ import androidx.core.content.ContextCompat
 import com.advol.app.AdVolApplication
 import com.advol.app.MainActivity
 import com.advol.app.R
-import com.advol.app.core.MuteStrategy
 import com.advol.app.core.PlaybackState
 import com.advol.app.receiver.SpotifyBroadcastReceiver
 import kotlinx.coroutines.CoroutineScope
@@ -33,13 +32,26 @@ class AdVolService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var broadcastReceiver: SpotifyBroadcastReceiver? = null
-    private var adStartTime: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "AdVolService created")
+        isRunning = true
         registerSpotifyReceiver()
+
+        // Mirror the coordinator's status into the persistent notification. The coordinator
+        // keeps working while this service is down, so this also catches up on restart.
+        val app = application as? AdVolApplication
+        if (app != null) {
+            serviceScope.launch {
+                app.adMuteCoordinator.statusText.collect { text ->
+                    if (isForeground) updateNotification(text)
+                }
+            }
+        }
     }
+
+    private var isForeground = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
@@ -51,17 +63,18 @@ class AdVolService : Service() {
                     val app = application as AdVolApplication
                     app.preferencesManager.setServiceEnabled(false)
                     app.volumeController.restore()
-                    updateNotification("Monitoring paused")
+                    app.adMuteCoordinator.setStatus("Monitoring paused")
                 }
             }
             ACTION_RESUME -> {
                 serviceScope.launch {
                     val app = application as AdVolApplication
                     app.preferencesManager.setServiceEnabled(true)
-                    updateNotification("Monitoring Spotify...")
+                    app.adMuteCoordinator.setStatus(getString(R.string.status_monitoring))
                 }
             }
             ACTION_STOP -> {
+                isForeground = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
@@ -75,7 +88,10 @@ class AdVolService : Service() {
     }
 
     private fun startInForeground() {
-        val notification = buildNotification(getString(R.string.status_monitoring))
+        val status = (application as? AdVolApplication)?.adMuteCoordinator?.statusText?.value
+            ?: getString(R.string.status_monitoring)
+        val notification = buildNotification(status)
+        isForeground = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
@@ -115,63 +131,6 @@ class AdVolService : Service() {
                 Log.e(TAG, "Error unregistering receiver: ${e.message}")
             }
             broadcastReceiver = null
-        }
-    }
-
-    private fun handlePlaybackUpdate(state: PlaybackState) {
-        serviceScope.launch {
-            val app = application as? AdVolApplication ?: return@launch
-            val isEnabled = app.preferencesManager.isServiceEnabled.first()
-
-            if (!isEnabled) {
-                Log.d(TAG, "Service is disabled by user, skipping volume change")
-                return@launch
-            }
-
-            val muteLevel = app.preferencesManager.muteLevelPercent.first()
-            val smoothFade = app.preferencesManager.isSmoothFadeEnabled.first()
-            val fadeDuration = app.preferencesManager.fadeDurationMs.first()
-            val duckWhenLocked = app.preferencesManager.isDuckWhenVolumeLockedEnabled.first()
-
-            if (state.isAd && state.isPlaying) {
-                Log.d(TAG, "Action: Muting Spotify Advertisement")
-                if (adStartTime == 0L) {
-                    adStartTime = System.currentTimeMillis()
-                }
-                app.volumeController.mute(
-                    targetPercent = muteLevel,
-                    smoothFade = smoothFade,
-                    fadeDurationMs = fadeDuration,
-                    allowDucking = duckWhenLocked
-                ) {
-                    // Called once the controller has decided which mechanism works on the
-                    // current route (phone volume vs. Android Auto ducking fallback).
-                    val text = when (app.volumeController.activeStrategy.value) {
-                        MuteStrategy.AUDIO_FOCUS_DUCK -> getString(R.string.status_ad_ducked)
-                        MuteStrategy.UNAVAILABLE -> getString(R.string.status_ad_volume_locked)
-                        else -> getString(R.string.status_ad_muted)
-                    }
-                    updateNotification(text)
-                }
-            } else {
-                Log.d(TAG, "Action: Restoring volume for normal playback / pause")
-                if (adStartTime > 0L) {
-                    val durationSec = (System.currentTimeMillis() - adStartTime) / 1000
-                    app.preferencesManager.incrementAdsMuted(durationSec)
-                    adStartTime = 0L
-                }
-                app.volumeController.restore(
-                    smoothFade = smoothFade,
-                    fadeDurationMs = fadeDuration
-                )
-
-                val displayText = if (!state.trackName.isNullOrBlank()) {
-                    "${state.trackName} - ${state.artistName.orEmpty()}"
-                } else {
-                    getString(R.string.status_monitoring)
-                }
-                updateNotification(displayText)
-            }
         }
     }
 
@@ -228,6 +187,8 @@ class AdVolService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
+        isForeground = false
         unregisterSpotifyReceiver()
         serviceScope.cancel()
         Log.d(TAG, "AdVolService destroyed")
@@ -242,13 +203,38 @@ class AdVolService : Service() {
         const val ACTION_PAUSE = "com.advol.app.action.PAUSE"
         const val ACTION_RESUME = "com.advol.app.action.RESUME"
 
-        private var activeServiceInstance: AdVolService? = null
+        /** True between onCreate and onDestroy of the live instance. */
+        @Volatile
+        var isRunning: Boolean = false
+            private set
 
         fun start(context: Context) {
             val intent = Intent(context, AdVolService::class.java).apply {
                 action = ACTION_START
             }
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        /**
+         * Starts the foreground service if it is not running and monitoring is enabled.
+         * Safe to call from the notification listener / broadcast receiver: on Android 12+ a
+         * background start may be refused, in which case we log and carry on (the coordinator
+         * still mutes without the service as long as this process is alive).
+         */
+        fun ensureRunning(context: Context) {
+            if (isRunning) return
+            val app = context.applicationContext as? AdVolApplication ?: return
+            app.appScope.launch {
+                if (!app.preferencesManager.isServiceEnabled.first()) return@launch
+                if (isRunning) return@launch
+                try {
+                    Log.d(TAG, "Service not running while Spotify is active; starting it")
+                    start(app)
+                } catch (e: Exception) {
+                    // ForegroundServiceStartNotAllowedException (API 31+) is an IllegalStateException
+                    Log.w(TAG, "Could not start foreground service from background: ${e.message}")
+                }
+            }
         }
 
         fun stop(context: Context) {
@@ -259,11 +245,11 @@ class AdVolService : Service() {
         }
 
         fun onPlaybackStateReceived(context: Context, state: PlaybackState) {
-            activeServiceInstance?.handlePlaybackUpdate(state)
+            val app = context.applicationContext as? AdVolApplication ?: return
+            // Decide and act immediately, whether or not the service is up...
+            app.adMuteCoordinator.onPlaybackState(state)
+            // ...and bring the service back so the dynamic receiver and notification return.
+            ensureRunning(context)
         }
-    }
-
-    init {
-        activeServiceInstance = this
     }
 }

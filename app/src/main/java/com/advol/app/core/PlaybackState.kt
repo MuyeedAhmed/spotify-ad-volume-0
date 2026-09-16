@@ -20,6 +20,27 @@ data class PlaybackState(
         UNKNOWN
     }
 
+    companion object {
+        /**
+         * Spotify's `metadatachanged` broadcast does not carry a `playing` extra; only
+         * `playbackstatechanged` does. Falling back to the previous state's flag meant the first
+         * ad after a process start (previous state = default, not playing) was treated as paused
+         * and never muted.
+         *
+         * @param explicit the `playing` extra if the broadcast carried one.
+         */
+        fun resolveMetadataIsPlaying(explicit: Boolean?, previous: PlaybackState, isAd: Boolean): Boolean {
+            if (explicit != null) return explicit
+            return when {
+                // Ad metadata is only announced when the ad actually starts playing.
+                isAd -> true
+                // No playback state seen yet in this process: metadata changes happen during playback.
+                previous.source == Source.UNKNOWN -> true
+                else -> previous.isPlaying
+            }
+        }
+    }
+
     val displayTitle: String
         get() = when {
             isAd -> "Advertisement"
