@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">AdVol</string>
+    <string name="tile_name">AdVol Muter</string>
+    <string name="service_name">AdVol Background Monitor</string>
+    <string name="notification_channel_name">AdVol Service Channel</string>
+    <string name="notification_channel_desc">Shows ongoing monitoring status and controls for AdVol</string>
+    <string name="status_active">AdVol is Active</string>
+    <string name="status_inactive">AdVol is Paused</string>
+    <string name="status_monitoring">Monitoring Spotify Playback…</string>
+    <string name="status_ad_muted">Muting Spotify Advertisement</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+</resources>

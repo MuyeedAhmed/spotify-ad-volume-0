@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <!-- Outer glowing circle -->
+  <path
+      android:fillColor="#1DB954"
+      android:pathData="M54,24c-16.57,0 -30,13.43 -30,30s13.43,30 30,30 30,-13.43 30,-30 -13.43,-30 -30,-30zM54,78c-13.25,0 -24,-10.75 -24,-24s10.75,-24 24,-24 24,10.75 24,24 -10.75,24 -24,24z"/>
+  <!-- Sound / mute speaker icon inside -->
+  <path
+      android:fillColor="#1DB954"
+      android:pathData="M49.6,44.5L44.2,49.9H39.5V58.1H44.2L49.6,63.5V44.5z"/>
+  <!-- Sound waves -->
+  <path
+      android:fillColor="#1DB954"
+      android:pathData="M54.5,47.2v2.7c2.3,0.7 4,2.8 4,5.4s-1.7,4.7 -4,5.4v2.7c3.8,-0.8 6.7,-4.2 6.7,-8.1s-2.9,-7.3 -6.7,-8.1z"/>
+  <path
+      android:fillColor="#1DB954"
+      android:pathData="M54.5,41.5v2.8c5.4,0.9 9.5,5.6 9.5,11.3s-4.1,10.4 -9.5,11.3v2.8c7,-0.9 12.3,-6.9 12.3,-14.1s-5.3,-13.2 -12.3,-14.1z"/>
+</vector>
